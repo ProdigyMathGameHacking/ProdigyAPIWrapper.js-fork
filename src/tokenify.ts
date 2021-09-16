@@ -1,6 +1,5 @@
 /* eslint-disable camelcase */
 import JSDOM from "jsdom";
-import type { RequestInfo, RequestInit } from "node-fetch";
 import fetch from "node-fetch";
 import fetchCookie from "fetch-cookie";
 import { URLSearchParams } from "url";
@@ -35,14 +34,20 @@ interface MasterResponse {
     usertype: string;
 }
 
-const cookiefetch: typeof fetch = fetchCookie(fetch);
+const fromEntries = <T = any>(iterable: Iterable<readonly [PropertyKey, T]>) =>
+    [...iterable].reduce((obj, [key, val]) => {
+        obj[key as string] = val;
+        return obj;
+    }, {} as { [key: string]: T });
 
 export const tokenify = async (username: string, password: string, { log }: { log?: boolean } = {}) => {
+    const cookiefetch: typeof fetch = fetchCookie(fetch);
+
     if (log) console.log("Fetching login route...");
-    const url = Object.fromEntries((await cookiefetch("https://sso.prodigygame.com/game/login", {
+    const url = fromEntries((await cookiefetch("https://sso.prodigygame.com/game/login", {
         redirect: "manual"
     })).headers).location;
-    const formSite: Response = await cookiefetch(url);
+    const formSite = await cookiefetch(url);
     if (!formSite.ok) throw new Error(`The form page request was unable to be fetched with a code of ${formSite.status}.`);
     const site = await formSite.text();
     const dom = new JSDOM.JSDOM(site);
@@ -67,7 +72,10 @@ export const tokenify = async (username: string, password: string, { log }: { lo
     });
     if (!login.ok && !login.status.toString().startsWith("3")) throw new Error(`Initial login request was unsuccessful with code ${login.status}.`);
     if (log) console.log(`Initial login request done with a code of ${login.status}.`);
-    const playLogin = await cookiefetch(login.headers.get("location") || "", { redirect: "follow" });
+    const playLoginParams = new URLSearchParams();
+    playLoginParams.set("authenticity_token", new JSDOM.JSDOM(await (await cookiefetch(login.headers.get("location") ?? "")).text()).window.document.querySelector("input[name=authenticity_token]")?.getAttribute("value") ?? "");
+    const schoolLogin = await cookiefetch(`https://sso.prodigygame.com/premises?premises=home&rid=${new URL(login.headers.get("location") || "").searchParams.get("rid")}`, { headers: { "content-type": "application/x-www-form-urlencoded" }, body: playLoginParams.toString(), method: "POST", redirect: "manual" });
+    const playLogin = await cookiefetch(schoolLogin.headers.get("location") || "", { redirect: "follow" });
     if (!playLogin.ok && !playLogin.status.toString().startsWith("3")) throw new Error(`Client ID request failed with a code of ${playLogin.status}`);
     if (log) console.log(`Client ID request done with a code of ${playLogin.status}.`);
     const clientId = (await playLogin.text()).match(/var client_id = '([0-9a-f]+)';/)?.[1];
@@ -92,7 +100,10 @@ export const tokenify = async (username: string, password: string, { log }: { lo
     if (!secondTokenLogin.ok && !secondTokenLogin.status.toString().startsWith("3")) throw new Error(`Second authentication request failed with a code of ${secondTokenLogin.status}.`);
     if (log) console.log(`Second token request done with a code of ${secondTokenLogin.status}.`);
     const tokenProp = new URL((secondTokenLogin.headers.get("location") || "").replace("#", "?")).searchParams;
-    const tokenInit: TokenResponse = Object.fromEntries(tokenProp.entries()) as any;
+    const tokenInit: TokenResponse = tokenProp.toString().split("&").reduce((obj, item) => {
+        obj[item.split("=")[0]] = decodeURIComponent(item.split("=")[1]);
+        return obj;
+    }, {} as {[key: string]: any}) as TokenResponse;
     const master = await fetch("https://api.prodigygame.com/game-auth-api/v4/user", {
         headers: {
             "Content-Type": "application/json"
