@@ -1,4 +1,9 @@
+/* eslint-disable import/first */
 /* eslint-disable camelcase */
+if (typeof SharedArrayBuffer === "undefined") {
+    // @ts-ignore
+    global.SharedArrayBuffer = ArrayBuffer;
+}
 import JSDOM from "jsdom";
 import fetch from "node-fetch";
 import fetchCookie from "fetch-cookie";
