@@ -45,10 +45,34 @@ const fromEntries = <T = any>(iterable: Iterable<readonly [PropertyKey, T]>) =>
         return obj;
     }, {} as { [key: string]: T });
 
-export const tokenify = async (username: string, password: string, { log }: { log?: boolean } = {}) => {
-    const cookiefetch: typeof fetch = fetchCookie(fetch);
+export const tokenify = async (username: string, password: string, { log }: { log?: boolean } = {}, online: boolean = false) => {
+    let cookiefetch;
+    if (online) {
+        let lastCookie = "";
+
+        cookiefetch = async (url: globalThis.RequestInfo, options?: globalThis.RequestInit | undefined) => {
+            if (lastCookie) {
+                const res = await window.fetch(url, {
+                    ...options,
+                    headers: {
+                        ...options?.headers,
+                        cookie: lastCookie
+                    }
+                });
+                lastCookie = res.headers.get("set-cookie") ?? "";
+                return res;
+            } else {
+                const res = await window.fetch(url, options);
+                lastCookie = res.headers.get("set-cookie") ?? "";
+                return res;
+            }
+        };
+    } else {
+        cookiefetch = fetchCookie(fetch);
+    }
 
     if (log) console.log("Fetching login route...");
+    // @ts-ignore
     const url = fromEntries((await cookiefetch("https://sso.prodigygame.com/game/login", {
         redirect: "manual"
     })).headers).location;
