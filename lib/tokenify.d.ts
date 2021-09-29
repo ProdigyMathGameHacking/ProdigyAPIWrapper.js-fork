@@ -1,6 +1,6 @@
 export declare const tokenify: (username: string, password: string, { log }?: {
     log?: boolean | undefined;
-}, online?: boolean) => Promise<{
+}) => Promise<{
     authToken: string;
     classIDs: number[];
     curriculumOverride: unknown;
