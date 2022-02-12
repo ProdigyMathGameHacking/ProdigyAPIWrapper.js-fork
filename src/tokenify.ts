@@ -7,7 +7,7 @@ if (typeof SharedArrayBuffer === "undefined") {
 import JSDOM from "jsdom";
 import fetch from "node-fetch";
 import fetchCookie from "fetch-cookie";
-import { URLSearchParams } from "url";
+import { URL } from "url";
 
 interface TokenResponse {
     expires_in: string,
@@ -83,7 +83,7 @@ export const tokenify = async (username: string, password: string, { log }: { lo
     const playLogin = await cookiefetch(schoolLogin.headers.get("location") || "", { redirect: "follow" });
     if (!playLogin.ok && !playLogin.status.toString().startsWith("3")) throw new Error(`Client ID request failed with a code of ${playLogin.status}`);
     if (log) console.log(`Client ID request done with a code of ${playLogin.status}.`);
-    const clientId = (await playLogin.text()).match(/var client_id = '([0-9a-f]+)';/)?.[1];
+    const clientId = (await playLogin.text()).match(/const client_id = '([0-9a-f]+)';/)?.[1];
     if (clientId === undefined) throw new Error("Client ID was not found on in the request response.");
     const tokenParams = new URLSearchParams();
     tokenParams.set("client_id", clientId);
