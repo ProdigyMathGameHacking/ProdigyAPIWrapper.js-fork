@@ -1,8 +1,8 @@
 import fetch from "node-fetch";
 import { getGameStatus } from "./getGameStatus";
-import { GameData } from "./GameData"
+import { GameData } from "./GameData";
 
-export const getGameData = async ({ log }: { log?: boolean } = {})  => {
+export const getGameData = async ({ log }: { log?: boolean } = {}) => {
     const gameStatus = await getGameStatus({ log: log });
     if (log) console.log("Fetching game version...");
     const gameDataVersion = gameStatus.prodigyGameFlags.gameDataVersion;
