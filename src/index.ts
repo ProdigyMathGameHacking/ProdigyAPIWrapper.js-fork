@@ -6,3 +6,4 @@ export { updatePlayerData } from "./updatePlayerData";
 export { getPlayerUserID } from "./getPlayerUserID";
 export { getPlayerFriendRequests } from "./getPlayerFriendRequests";
 export { updatePlayerFriendRequests } from "./updatePlayerFriendRequests";
+export { generateAccount } from "./generateAccount";
